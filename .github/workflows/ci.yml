@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main", "test", "dev" ]
+    paths:
+      - 'docker-compose.yml'
+
+env:
+  BRANCH_NAME: ${{github.ref_name}}
+
+jobs:
+  redeploy:
+    needs: build
+    name: Redeploy
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v3
+      - name: Connect and exec
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets[format('SERVER_HOSTNAME_{0}', env.BRANCH_NAME)] }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets[format('SERVER_KEY_{0}', env.BRANCH_NAME)] }}
+          script: |
+            cd arlo-4a-pa-games/
+            git pull
+            docker compose pull
+            docker compose up -d
+            docker image prune -f
